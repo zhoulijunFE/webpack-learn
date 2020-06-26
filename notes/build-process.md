@@ -12,3 +12,37 @@ webpack 是一个现代 JavaScript 应用程序的静态模块打包器。当 we
 ## 构建流程
 <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-process.png" width="350" height="750"/>
 **注： 构建流程 是基于 webpack:  4.28.4 版本**
+
+### 配置解析、合并
+  通过 yargs 解析 webpack.config.js 与 命令行参数，合并options对象
+  ```
+  // 配置解析入口：/webpack-cli/bin/cli.js
+  const yargs = require("yargs")
+  yargs.parse(process.argv.slice(2), (err, argv, output) => {
+    // 命令行中读取config参数
+    if (argv.config) {
+      const configArgList = Array.isArray(argv.config) ? argv.config : [argv.config];
+      const mapConfigArg = function mapConfigArg(configArg) {
+        const resolvedPath = path.resolve(configArg);
+      }
+      configFiles = configArgList.map(mapConfigArg);
+    } else {
+      // 项目目录查找 webpack.config配置
+      const defaultConfigFileNames = ["webpack.config", "webpackfile"].join("|");
+      const webpackConfigFileRegExp = `(${defaultConfigFileNames})(${extensions.join("|")})`;
+      const pathToWebpackConfig = findup(webpackConfigFileRegExp);
+      if (pathToWebpackConfig) {
+        const resolvedPath = path.resolve(pathToWebpackConfig);
+        configFiles.push({
+          path: resolvedPath,
+        });
+      }
+    }
+
+  // 配置文件转化options对象 /webpack-cli/bin/utils/convert-argv.js
+  options = require(path.resolve(process.cwd(), filePath))
+  ```
+
+### 编译前的准备工作
+  根据第一步options对象 生成 Compiler 对象，然后初始化 webpack 的默认配置options、及内置插件
+   <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-before.png" width="690" height="350"/>
