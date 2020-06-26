@@ -10,3 +10,4 @@ webpack 是一个现代 JavaScript 应用程序的静态模块打包器。当 we
 * **Plugin:**   扩展插件，在 webpack 构建流程中的特定时机会广播出对应的事件，插件可以订阅这些事件的发生，在特定时机做对应的事情
 
 ## 构建流程
+<img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-process.png" width="350" height="700"/>
