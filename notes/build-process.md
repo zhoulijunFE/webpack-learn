@@ -579,4 +579,6 @@ static renderChunkModules(chunk, filterFn, moduleTemplate, dependencyTemplates) 
   ```
  
 ## 学习参考
-https://github.com/DDFE/DDFE-blog/issues/12
+https://juejin.im/post/5dcaa685f265da4d2375a162#heading-7
+https://cloud.tencent.com/developer/article/1410197
+https://imweb.io/topic/5baca58079ddc80f36592f1a
