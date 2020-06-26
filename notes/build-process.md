@@ -28,6 +28,9 @@ webpack 是一个现代 JavaScript 应用程序的静态模块打包器。当 we
 5. 调用webpack-cli入口
    node_modules/webpack-cli/bin/cli.js
 ```
+## 构建node脚本代码调试
+   参见：https://webpack.docschina.org/contribute/debugging/
+   命令行输入： node --inspect-brk ./node_modules/webpack/bin/webpack.js --config ./build/webpack.conf.js
 
 ## 构建流程
 <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-process.png" width="350" height="750"/>
@@ -575,3 +578,5 @@ static renderChunkModules(chunk, filterFn, moduleTemplate, dependencyTemplates) 
   }
   ```
  
+## 学习参考
+https://github.com/DDFE/DDFE-blog/issues/12
