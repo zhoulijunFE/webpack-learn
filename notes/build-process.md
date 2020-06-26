@@ -399,3 +399,159 @@ class NormalModule extends Module {
           : null;
     }
  ```
+### 生成chunks
+  把modules生成chunk，生成最终源码存放在compilation.assets属性上
+  <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-chunk.png" width="700" height="500" />
+#### Chunk
+  * 配置在entry入口模块， MainTemplate模板render方法渲染源码
+  * 依赖引入的模块（require/import进来的），chunkTemplate模板render方法渲染源码
+#### 代码详细拆解
+ ```
+ // webpack/lib/Compilation.js
+seal(callback) {
+  // 创建入口模块chunk
+  for (const preparedEntrypoint of this._preparedEntrypoints) {
+    const module = preparedEntrypoint.module;
+    const name = preparedEntrypoint.name;
+    const chunk = this.addChunk(name);
+  }
+  // 递归创建依赖模块chunk
+  this.processDependenciesBlocksForChunkGroups(this.chunkGroups.slice());
+  // 生成assets
+  this.createChunkAssets()
+}
+ 
+ 
+// createChunkAssets方法
+createChunkAssets() {
+  for (let i = 0; i < this.chunks.length; i++) {
+    const chunk = this.chunks[i];
+    // 判断是入口模块chunk、依赖模块chunk 调用不用的模块类方法
+    const template = chunk.hasRuntime()
+      ? this.mainTemplate
+      : this.chunkTemplate;
+    // 调用模板MainTemplate or ChunkTemplate的getRenderManifest方法
+    const manifest = template.getRenderManifest({
+      chunk,
+      moduleTemplates: this.moduleTemplates,
+      dependencyTemplates: this.dependencyTemplates
+    });
+    for (const fileManifest of manifest) {
+      source = fileManifest.render();
+      // chunk源码存放assets中
+      this.assets[file] = source;
+    }
+  }
+}
+ 
+// webpack/lib/MainTemplate.js
+  // getRenderManifest方法
+  getRenderManifest(options) {
+    const result = [];
+    // 触发 mainTemplate.hooks.renderManifest钩子
+    this.hooks.renderManifest.call(result, options);
+    return result;
+  }
+  // render方法
+  render(hash, chunk, moduleTemplate, dependencyTemplates) {
+    // 触发mainTemplate.hooks.render钩子
+    let source = this.hooks.render.call(
+      new OriginalSource(
+        Template.prefix(buf, " \t") + "\n",
+        "webpack/bootstrap"
+      ),
+      chunk,
+      hash,
+      moduleTemplate,
+      dependencyTemplates
+  );
+ // 订阅mainTemplate.hooks.render钩子，生成源代码
+ this.hooks.render.tap(
+   "MainTemplate",
+   (bootstrapSource, chunk, hash, moduleTemplate, dependencyTemplates) => {
+     const source = new ConcatSource();
+     source.add("/******/ (function(modules) { // webpackBootstrap\n");
+     source.add(new PrefixSource("/******/", bootstrapSource));
+     source.add("/******/ })\n");
+     source.add("/************************************************************************/\n");
+     source.add("/******/ (");
+     source.add(
+      this.hooks.modules.call(
+        new RawSource(""),
+        chunk,
+        hash,
+        moduleTemplate,
+        dependencyTemplates
+      )
+    );
+    source.add(")");
+    return source;
+  }
+);
+ 
+ 
+// webpack/lib/ChunkTemplate.js
+   getRenderManifest(options) {
+     const result = [];
+     // 触发chunkTemplate.hooks.renderManifest钩子
+     this.hooks.renderManifest.call(result, options);
+     return result;
+   }
+ }
+ 
+ 
+// webpack/lib/JavascriptModulesPlugin.js
+// 订阅mainTemplate.hooks.renderManifest钩子
+compilation.mainTemplate.hooks.renderManifest.tap("JavascriptModulesPlugin",
+  (result, options) => {
+     // 调用MainTemplate模板run方法
+     compilation.mainTemplate.render(
+       hash,
+       chunk,
+       moduleTemplates.javascript,
+       dependencyTemplates
+     )
+  })
+// 订阅chunkTemplate.hooks.renderManifest钩子
+compilation.chunkTemplate.hooks.renderManifest.tap("JavascriptModulesPlugin",
+  (result, options) => {
+     this.renderJavascript(
+       compilation.chunkTemplate,
+       chunk,
+       moduleTemplates.javascript,
+       dependencyTemplates
+  )
+)}
+renderJavascript(chunkTemplate, chunk, moduleTemplate, dependencyTemplates) {
+  // Template.renderChunkModules
+  const moduleSources = Template.renderChunkModules(
+    chunk,
+    moduleTemplate,
+    dependencyTemplates   
+ );
+ 
+ 
+// webpack/lib/Template.js
+static renderChunkModules(chunk, filterFn, moduleTemplate, dependencyTemplates) {
+  const modules = chunk.getModules().filter(filterFn);
+  const allModules = modules.map(module => {
+    return {
+      id: module.id,
+      source: moduleTemplate.render(module, dependencyTemplates, {
+        chunk
+      })
+    };
+  });
+}
+ ```
+
+### 文件输出
+  按照output的配置，把构建结果输出到文件中
+  ```
+    // webpack/lib/Compiler.js
+  this.emitAssets(compilation, err => {
+    let content = source.source();
+    this.outputFileSystem.writeFile(targetPath, content, callback);
+  }
+  ```
+ 
