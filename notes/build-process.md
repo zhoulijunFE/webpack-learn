@@ -9,6 +9,26 @@ webpack 是一个现代 JavaScript 应用程序的静态模块打包器。当 we
 * **Loader:**   对模块的源代码进行转换为 webpack 能够处理的有效模块
 * **Plugin:**   扩展插件，在 webpack 构建流程中的特定时机会广播出对应的事件，插件可以订阅这些事件的发生，在特定时机做对应的事情
 
+## 构建入口
+```
+1. 运行：
+   npm run build
+ 
+2. package.json中配置：
+   "scripts": {
+     "build": "webpack --config webpack.config.js",
+   }
+ 
+3. webpack脚本
+   node-modules/.bin/webpack
+ 
+4. 执行文件
+   node_modules/webpack/bin/webpack.js
+ 
+5. 调用webpack-cli入口
+   node_modules/webpack-cli/bin/cli.js
+```
+
 ## 构建流程
 <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-process.png" width="350" height="750"/>
 **注： 构建流程 是基于 webpack:  4.28.4 版本**
