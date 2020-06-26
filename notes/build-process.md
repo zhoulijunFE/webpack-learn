@@ -239,3 +239,163 @@ class SingleEntryPlugin {
   }
 }
 ```
+### 生成modules
+  入口模块、模块依赖对象Dependence, 经过对应的工厂对象(**Factory )转化为对应的模块实例(Module)
+  <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-module.png" width="830" height="300"/>
+#### Module模块实例
+数据结构：
+ [{
+    //...属性
+    dependencies:  [{
+       //...属性
+       module:  {
+         //...属性
+         dependencies: [{
+           // ... 不断递归
+         }
+       }]
+   }
+  #### 代码详细拆解
+  ```
+  // webpack/lib/Compilation.js
+// addEntry方法
+addEntry(context, entry, name, callback) {
+  // 调用_addModuleChain方法
+  this._addModuleChain(
+    context,
+    entry,
+    module => {
+      this.entries.push(module);
+    },
+    (err, module) => {
+       if (module) {
+         slot.module = module;
+       } else {
+         const idx = this._preparedEntrypoints.indexOf(slot);
+         if (idx >= 0) {
+           this._preparedEntrypoints.splice(idx, 1);
+         }
+       }
+      return callback(null, module);
+   })
+}
+ 
+// _addModuleChain方法
+_addModuleChain(context, dependency, onModule, callback) {
+  const Dep = /** @type {DepConstructor} */ (dependency.constructor);
+  // 根据依赖查找对应的工厂函数
+  const moduleFactory = this.dependencyFactories.get(Dep);
+    this.semaphore.acquire(() => {
+      // 调用工厂函数NormalModuleFactory的create来生成NormalModule对象
+      moduleFactory.create(
+        {
+          dependencies: [dependency]
+        },
+        (err, module) => {
+           // 回调存入compilation modules中
+           const addModuleResult = this.addModule(module);
+           module = addModuleResult.module;
+           onModule(module);
+           dependency.module = module;
+ 
+ 
+           const afterBuild = () => {
+             if (addModuleResult.dependencies) {
+               // 递归处理dependencies依赖
+               this.processModuleDependencies(module）
+             }
+           }
+ 
+ 
+           this.buildModule(module, false, null, null, err => {
+             this.semaphore.release();
+             // 调用afterBuild递归处理dependencies依赖
+             afterBuild();
+           })
+        })
+    }
+ 
+// buildModule方法
+buildModule(module, optional, origin, dependencies, thisCallback) {
+   // 调用NormalModule.build()
+   module.build(
+     this.options,
+     this,
+     this.resolverFactory.get("normal", module.resolveOptions),
+     this.inputFileSystem
+   )
+}
+ 
+ 
+// webpack/lib/NormalModuleFactory.js
+// 订阅NormalModuleFactory.hooks.factory
+this.hooks.factory.tap("NormalModuleFactory", () => (result, callback) => {
+  // 生成NormalModule对象
+  createdModule = new NormalModule(result);
+  return callback(null, createdModule);
+})
+ 
+ 
+create(data, callback) {
+  // 触发NormalModuleFactory.hooks.factory
+  const factory = this.hooks.factory.call(null);
+  factory(result, (err, module) => {
+    callback(null, module);
+  });
+}
+  ```
+  
+  #### loader处理源文件、转化AST
+ ```
+ // webpack/lib/NormalModule.js
+class NormalModule extends Module {
+  // build方法
+  build(options, compilation, resolver, fs, callback) {
+    this.buildInfo = {
+      cacheable: false,
+      fileDependencies: new Set(),
+      contextDependencies: new Set()
+    }
+    // 调用doBuild解析模块源码source
+    return this.doBuild(options, compilation, resolver, fs, err => {
+      // acorn将JS解析为AST，解析模块依赖关系，后续module递归遍历
+      const result = this.parser.parse(
+      this._ast || this._source.source(),
+      {
+         current: this,
+         module: this,
+         compilation: compilation,
+         options: options
+      }
+   }
+ 
+ 
+   // doBuild方法
+   doBuild(options, compilation, resolver, fs, callback) {
+     // loader转化为标准js模块
+     runLoaders(
+      {
+        resource: this.resource,
+        readResource: fs.readFile.bind(fs)
+      }, (err, result) => {
+        if (result) {
+          this.buildInfo.cacheable = result.cacheable;
+          this.buildInfo.fileDependencies = new Set(result.fileDependencies)
+        }
+        const resourceBuffer = result.resourceBuffer;
+        const source = result.result[0];
+        const sourceMap = result.result.length >= 1 ? result.result[1] : null;
+        // loader模块转化后_source
+        this._source = this.createSource(
+          this.binary ? asBuffer(source) : asString(source),
+          resourceBuffer,
+          sourceMap
+        );
+        this._ast =
+          typeof extraInfo === "object" &&
+          extraInfo !== null &&
+          extraInfo.webpackAST !== undefined
+          ? extraInfo.webpackAST
+          : null;
+    }
+ ```
