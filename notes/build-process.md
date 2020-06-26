@@ -11,3 +11,7 @@ webpack 是一个现代 JavaScript 应用程序的静态模块打包器。当 we
 
 ## 构建流程
 <img src="https://github.com/zhoulijunFE/webpack-learn/blob/master/static/build-process.png" width="350" height="700"/>
+```diff - 注： 构建流程 是基于 webpack:  4.28.4 版本```
+```html
+<span style="color: red">注： 构建流程 是基于 webpack:  4.28.4 版本</span>
+```
